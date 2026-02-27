@@ -54,6 +54,35 @@ skills/outlook-graph-mail/scripts/outlook-graph-move.sh "<message_id>" archive
 skills/outlook-graph-mail/scripts/outlook-graph-keepalive.sh
 ```
 
+## Azure / Entra setup prerequisites
+
+Configure this once before using the skill:
+
+1. **Create app registration** in Microsoft Entra ID
+   - Suggested name: `alpha-outlook-imap-cli` (or similar)
+   - **Supported account types:** include personal Microsoft accounts
+     - `AzureADandPersonalMicrosoftAccount`
+2. **Authentication settings**
+   - Enable **public client flows** (device code flow)
+   - No client secret required for this skill workflow
+3. **Delegated API permissions (Microsoft Graph)**
+   - `Mail.Read`
+   - `Mail.ReadWrite`
+   - `Mail.Send`
+   - `offline_access`
+   - `openid`
+   - `profile`
+4. **Consent**
+   - Perform user consent in device-code flow during first auth
+   - If tenant policy requires admin consent, complete it before first run
+5. **Capture config values**
+   - `client_id` (Application ID)
+   - `tenant` (`consumers` recommended for Outlook.com personal mailbox)
+6. **First auth run**
+   - `skills/outlook-graph-mail/scripts/outlook-graph-auth.sh`
+
+Without these Azure-side settings, mailbox operations will fail (401/403 or missing-scope errors).
+
 ## Default config
 
 - Client ID default: `4a8603ea-1f64-4963-85bc-27c5758fd6f3`
