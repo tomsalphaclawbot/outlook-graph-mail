@@ -50,7 +50,7 @@ skills/outlook-graph-mail/scripts/outlook-graph-archive.sh "<message_id>"
 skills/outlook-graph-mail/scripts/outlook-graph-delete.sh "<message_id>"
 skills/outlook-graph-mail/scripts/outlook-graph-move.sh "<message_id>" archive
 
-# 6) Keep token fresh for unattended runs
+# 6) Keep token fresh
 skills/outlook-graph-mail/scripts/outlook-graph-keepalive.sh
 ```
 
@@ -59,13 +59,10 @@ skills/outlook-graph-mail/scripts/outlook-graph-keepalive.sh
 Configure this once before using the skill:
 
 1. **Create app registration** in Microsoft Entra ID
-   - Suggested name: `alpha-outlook-imap-cli` (or similar)
-   - **Supported account types:** include personal Microsoft accounts
-     - `AzureADandPersonalMicrosoftAccount`
+   - Include personal Microsoft accounts (`AzureADandPersonalMicrosoftAccount`)
 2. **Authentication settings**
-   - Enable **public client flows** (device code flow)
-   - No client secret required for this skill workflow
-3. **Delegated API permissions (Microsoft Graph)**
+   - Enable **public client flows** (device code)
+3. **Delegated Microsoft Graph permissions**
    - `Mail.Read`
    - `Mail.ReadWrite`
    - `Mail.Send`
@@ -73,15 +70,11 @@ Configure this once before using the skill:
    - `openid`
    - `profile`
 4. **Consent**
-   - Perform user consent in device-code flow during first auth
-   - If tenant policy requires admin consent, complete it before first run
-5. **Capture config values**
+   - Complete user consent during device-code auth
+   - If tenant policy requires admin consent, complete that first
+5. **Set values for skill config**
    - `client_id` (Application ID)
-   - `tenant` (`consumers` recommended for Outlook.com personal mailbox)
-6. **First auth run**
-   - `skills/outlook-graph-mail/scripts/outlook-graph-auth.sh`
-
-Without these Azure-side settings, mailbox operations will fail (401/403 or missing-scope errors).
+   - `tenant` (use `consumers` for Outlook.com personal mailbox)
 
 ## Default config
 
@@ -99,13 +92,21 @@ Override with env vars:
 ## Operational notes
 
 - Prefer Graph scripts over basic IMAP/POP/SMTP auth for Outlook.
-- Scripts auto-refresh access tokens (refresh_token + expiry-aware logic) and retry once on 401.
+- Scripts auto-refresh tokens and retry once on 401 with forced refresh.
 - For spam checks, use `outlook-graph-read-folder.sh junkemail ...`.
 - For deterministic triage: read -> act by `message_id` -> verify folder counts.
 
-### Optional cron keepalive
-Run every 30 minutes to keep tokens warm for unattended automations:
+### Required install step for unattended reliability
+If this skill will be used by heartbeat/automation lanes, install a **user crontab** keepalive entry (not OpenClaw cron):
 
 ```bash
-*/30 * * * * cd ~/.openclaw/workspace && skills/outlook-graph-mail/scripts/outlook-graph-keepalive.sh >> state/outlook-graph-keepalive.log 2>&1
+crontab -l > /tmp/mycron
+printf '*/30 * * * * cd ~/.openclaw/workspace && skills/outlook-graph-mail/scripts/outlook-graph-keepalive.sh >> state/outlook-graph-keepalive.log 2>&1\n' >> /tmp/mycron
+crontab /tmp/mycron
+```
+
+Verify:
+
+```bash
+crontab -l | grep outlook-graph-keepalive
 ```
